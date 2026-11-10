@@ -33,22 +33,15 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Buat Project Android
         run: |
           PACKAGE_PATH=$(echo "${{ inputs.packageName }}" | tr '.' '/')
           mkdir -p app/src/main/java/$PACKAGE_PATH
-          mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/values
-          mkdir -p gradle/wrapper
-
           cat > settings.gradle <<'EOF'
           rootProject.name = "app"
           include ':app'
           EOF
-
           cat > build.gradle <<'EOF'
           buildscript {
             repositories { google(); mavenCentral() }
@@ -56,8 +49,7 @@ jobs:
           }
           allprojects { repositories { google(); mavenCentral() } }
           EOF
-
-          cat > app/build.gradle <<'EOF'
+          cat > app/build.gradle <<EOF
           apply plugin: 'com.android.application'
           android {
             namespace "${{ inputs.packageName }}"
@@ -74,7 +66,6 @@ jobs:
           }
           dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }
           EOF
-
           cat > app/src/main/java/$PACKAGE_PATH/MainActivity.java <<EOF
           package ${{ inputs.packageName }};
           import android.os.Bundle;
@@ -93,17 +84,10 @@ jobs:
             }
           }
           EOF
-
-          cat > app/src/main/res/layout/activity_main.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" />
-          EOF
-
           cat > app/src/main/res/values/strings.xml <<EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources><string name="app_name">${{ inputs.appName }}</string></resources>
           EOF
-
           cat > app/src/main/AndroidManifest.xml <<EOF
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -118,23 +102,9 @@ jobs:
 
       - name: Build APK
         run: |
-          cd $GITHUB_WORKSPACE
-          # Download gradle wrapper
-          curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradle/wrapper/gradle-wrapper.jar
-          echo "distributionUrl=https://services.gradle.org/distributions/gradle-8.2-bin.zip" > gradle/wrapper/gradle-wrapper.properties
-          echo "distributionBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
-          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          chmod +x gradlew || true
-          # Buat gradlew sederhana kalau belum ada
-          if [ ! -f gradlew ]; then
-            curl -L -o gradle-8.2-bin.zip https://services.gradle.org/distributions/gradle-8.2-bin.zip
-            unzip -q gradle-8.2-bin.zip
-            ./gradle-8.2/bin/gradle assembleDebug
-          else
-            ./gradlew assembleDebug
-          fi
+          curl -L -o gradle.zip https://services.gradle.org/distributions/gradle-8.2-bin.zip
+          unzip -q gradle.zip
+          ./gradle-8.2/bin/gradle assembleDebug --stacktrace
           ls -lh app/build/outputs/apk/debug/
 
       - name: Upload APK
