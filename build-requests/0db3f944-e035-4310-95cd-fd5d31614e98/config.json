@@ -1,0 +1,15 @@
+{
+  "appName": "Dapaaja",
+  "packageName": "com.dapp.dapaaja",
+  "version": "1.0",
+  "sourceType": "url",
+  "url": "https://dapp-2-apk.vercel.app",
+  "orientation": "sensor",
+  "fullscreen": true,
+  "keepScreenOn": true,
+  "permissions": {
+    "internet": true,
+    "camera": false,
+    "location": false
+  }
+}
