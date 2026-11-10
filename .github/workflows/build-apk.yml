@@ -1,6 +1,8 @@
 
 name: DAPP BUILDER - Build APK
 
+run-name: DAPP BUILD ${{ inputs.build_id }}
+
 on:
   workflow_dispatch:
     inputs:
