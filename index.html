@@ -481,10 +481,18 @@ function renderTurnstile(root) {
     if (inputHtml) inputHtml.oninput = function(e) { state.html = e.target.value; };
 
     var inputAppName = root.querySelector("#input-appname");
-    if (inputAppName) inputAppName.oninput = function(e) { state.appName = e.target.value; render(); };
+if (inputAppName) {
+  inputAppName.oninput = function(e) {
+    state.appName = e.target.value;
+  };
+}
 
-    var inputPkg = root.querySelector("#input-pkg");
-    if (inputPkg) inputPkg.oninput = function(e) { state.packageName = e.target.value; render(); };
+var inputPkg = root.querySelector("#input-pkg");
+if (inputPkg) {
+  inputPkg.oninput = function(e) {
+    state.packageName = e.target.value;
+  };
+}
 
     var inputVersion = root.querySelector("#input-version");
     if (inputVersion) inputVersion.oninput = function(e) { state.version = e.target.value; };
