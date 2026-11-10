@@ -303,6 +303,29 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
+function renderTurnstile(root) {
+  var container = root.querySelector("#turnstile-container");
+  if (!container) return;
+
+  if (!window.turnstile || typeof window.turnstile.render !== "function") {
+    container.textContent = "Memuat verifikasi Cloudflare...";
+    return;
+  }
+
+  window.turnstile.render(container, {
+    sitekey: "0x4AAAAAAF7vQWpzBjJjZFlC",
+    callback: function(token) {
+      state.turnstileToken = token;
+    },
+    "expired-callback": function() {
+      state.turnstileToken = "";
+    },
+    "error-callback": function() {
+      state.turnstileToken = "";
+    }
+  });
+}
+  
   function render() {
     var root = document.getElementById("root");
     if (!root) return;
@@ -435,6 +458,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     html += "</div>";
 
     root.innerHTML = html;
+    renderTurnstile(root);
     attachEvents(root);
   }
 
