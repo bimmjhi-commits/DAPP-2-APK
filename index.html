@@ -98,6 +98,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     savedHistory: null,
     isZipping: false,
     isBuilding: false,
+    turnstileToken: "",
     buildId: null,
     buildMessage: "",
     apkReady: false
@@ -228,10 +229,11 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          config: finalConfig,
-          html: state.sourceType === "html" ? state.html : "",
-          logoDataUrl: state.logoDataUrl || null
-        })
+  config: finalConfig,
+  html: state.sourceType === "html" ? state.html : "",
+  logoDataUrl: state.logoDataUrl || null,
+  turnstileToken: state.turnstileToken || ""
+})
       });
       var data = await response.json().catch(function() { return {}; });
       if (!response.ok || !data.ok || !data.build_id) {
@@ -391,6 +393,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     html += "    <div class=\"bg-[#FFFFFF] border border-[#C5DAF0] rounded-2xl p-5 shadow-[0_4px_16px_rgba(30,58,138,0.06)] space-y-4\">";
     html += "      <div class=\"space-y-3\">";
     var buildButtonText = state.apkReady ? "INSTALL APK" : (state.isBuilding ? "MEMBUAT APK..." : "BUAT APK");
+    html += "        <div id=\"turnstile-container\" class=\"flex justify-center\"></div>";
     html += "        <button type=\"button\" id=\"btn-buat-apk\" " + (state.isBuilding ? "disabled" : "") + " class=\"w-full bg-[#0F2942] hover:bg-[#1A3A5C] text-white font-bold uppercase tracking-[-0.5px] py-3.5 px-5 rounded-xl text-xs transition-colors shadow-none cursor-pointer\">" + buildButtonText + "</button>";
     html += "        <p class=\"text-[11px] font-normal tracking-normal text-[#4A6585] text-center\">" + (state.apkReady ? "APK siap diunduh dan dipasang." : (state.isBuilding ? "Proses build sedang berjalan di GitHub Actions." : "APK dibuat otomatis lewat GitHub Actions.")) + "</p>";
     html += "        <button type=\"button\" id=\"btn-download-zip\" " + (state.isZipping ? "disabled" : "") + " class=\"w-full bg-white border border-[#C5DAF0] hover:border-[#93BCE2] text-[#0F2942] font-bold uppercase tracking-[-0.5px] py-3.5 px-5 rounded-xl text-xs transition-colors cursor-pointer\">" + (state.isZipping ? "Membuat ZIP..." : "Download Project ZIP") + "</button>";
