@@ -239,6 +239,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
   config: finalConfig,
+  turnstileToken: state.turnstileToken || "",
   html: state.sourceType === "html" ? state.html : "",
   logoDataUrl: state.logoDataUrl || null,
   turnstileToken: state.turnstileToken || ""
@@ -307,12 +308,14 @@ function renderTurnstile(root) {
   var container = root.querySelector("#turnstile-container");
   if (!container) return;
 
+  if (container.dataset.widgetId) return;
+
   if (!window.turnstile || typeof window.turnstile.render !== "function") {
     container.textContent = "Memuat verifikasi Cloudflare...";
     return;
   }
 
-  window.turnstile.render(container, {
+  var widgetId = window.turnstile.render(container, {
     sitekey: "0x4AAAAAAF7vQWpzBjJjZFlC",
     callback: function(token) {
       state.turnstileToken = token;
@@ -324,6 +327,8 @@ function renderTurnstile(root) {
       state.turnstileToken = "";
     }
   });
+
+  container.dataset.widgetId = widgetId;
 }
 
   window.addEventListener("dapp-turnstile-loaded", function() {
@@ -463,8 +468,7 @@ function renderTurnstile(root) {
     html += "</div>";
 
     root.innerHTML = html;
-    renderTurnstile(root);
-    attachEvents(root);
+attachEvents(root);
   }
 
   function attachEvents(root) {
