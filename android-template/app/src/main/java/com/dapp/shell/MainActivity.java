@@ -3,10 +3,11 @@ package com.dapp.shell;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.view.View;
+import android.view.WindowManager;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.WebSettings;
-import android.view.WindowManager;
 import android.widget.Toast;
 import org.json.JSONObject;
 import java.io.InputStream;
@@ -30,14 +31,24 @@ public class MainActivity extends Activity {
                 new String(data, StandardCharsets.UTF_8)
             );
 
-            String sourceType = config.optString("sourceType", "url");
-            String url = config.optString("url", "");
-
-            if (config.optBoolean("tetapMenyala", false)) {
+            if (config.optBoolean("keepScreenOn", false)) {
                 getWindow().addFlags(
                     WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
                 );
             }
+
+            if (config.optBoolean("fullscreen", false)) {
+                getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                );
+            }
+
+            String sourceType =
+                config.optString("sourceType", "url");
+
+            String url = config.optString("url", "");
 
             webView = new WebView(this);
             webView.setWebViewClient(new WebViewClient());
@@ -51,7 +62,9 @@ public class MainActivity extends Activity {
             setContentView(webView);
 
             if ("html".equalsIgnoreCase(sourceType)) {
-                webView.loadUrl("file:///android_asset/index.html");
+                webView.loadUrl(
+                    "file:///android_asset/index.html"
+                );
             } else if (!url.isEmpty()) {
                 webView.loadUrl(url);
             } else {
@@ -63,7 +76,7 @@ public class MainActivity extends Activity {
 
         } catch (Exception e) {
             Toast.makeText(this,
-                "Gagal membuka aplikasi: " + e.getMessage(),
+                "Gagal membuka aplikasi",
                 Toast.LENGTH_LONG
             ).show();
         }
