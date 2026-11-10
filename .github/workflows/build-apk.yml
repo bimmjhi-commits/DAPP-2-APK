@@ -39,8 +39,20 @@ jobs:
           mkdir -p app/src/main/java/$PACKAGE_PATH
           mkdir -p app/src/main/res/values
           cat > settings.gradle <<'EOF'
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+          pluginManagement {
+            repositories {
+              google()
+              mavenCentral()
+              gradlePluginPortal()
+            }
+          }
+          dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+              google()
+              mavenCentral()
+            }
+          }
           rootProject.name = "app"
           include ':app'
           EOF
@@ -50,25 +62,59 @@ jobs:
           org.gradle.jvmargs=-Xmx2048m
           EOF
           cat > build.gradle <<'EOF'
-          buildscript { repositories { google(); mavenCentral() } dependencies { classpath 'com.android.application:8.2.2' } }
-          allprojects { repositories { google(); mavenCentral() } }
+          plugins {
+            id 'com.android.application' version '8.2.2' apply false
+          }
           EOF
-          cat > app/build.gradle <<'EOF'
-          apply plugin: 'com.android.application'
-          android { namespace "com.example.myapp"; compileSdk 34; defaultConfig { applicationId "com.example.myapp"; minSdk 24; targetSdk 34; versionCode 1; versionName "1.0" } buildTypes { release { minifyEnabled false } } compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 } }
+          cat > app/build.gradle <<EOF
+          plugins { id 'com.android.application' }
+          android {
+            namespace "${{ inputs.packageName }}"
+            compileSdk 34
+            defaultConfig {
+              applicationId "${{ inputs.packageName }}"
+              minSdk 24
+              targetSdk 34
+              versionCode 1
+              versionName "${{ inputs.versionName }}"
+            }
+            buildTypes { release { minifyEnabled false } }
+            compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+          }
           dependencies { implementation 'androidx.appcompat:appcompat:1.6.1' }
           EOF
-          mkdir -p app/src/main/java/$PACKAGE_PATH
-          cat > app/src/main/java/$PACKAGE_PATH/MainActivity.java <<'EOF'
-          package com.example.myapp;
-          import android.os.Bundle; import android.webkit.WebView; import android.webkit.WebViewClient; import androidx.appcompat.app.AppCompatActivity;
-          public class MainActivity extends AppCompatActivity { @Override protected void onCreate(Bundle s) { super.onCreate(s); WebView wv = new WebView(this); wv.getSettings().setJavaScriptEnabled(true); wv.getSettings().setDomStorageEnabled(true); wv.setWebViewClient(new WebViewClient()); wv.loadUrl("https://example.com"); setContentView(wv); } }
+          cat > app/src/main/java/$PACKAGE_PATH/MainActivity.java <<EOF
+          package ${{ inputs.packageName }};
+          import android.os.Bundle;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import androidx.appcompat.app.AppCompatActivity;
+          public class MainActivity extends AppCompatActivity {
+            @Override protected void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              WebView wv = new WebView(this);
+              wv.getSettings().setJavaScriptEnabled(true);
+              wv.getSettings().setDomStorageEnabled(true);
+              wv.setWebViewClient(new WebViewClient());
+              wv.loadUrl("${{ inputs.appUrl }}");
+              setContentView(wv);
+            }
+          }
           EOF
-          cat > app/src/main/res/values/strings.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?><resources><string name="app_name">MyApp</string></resources>
+          cat > app/src/main/res/values/strings.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources><string name="app_name">${{ inputs.appName }}</string></resources>
           EOF
-          cat > app/src/main/AndroidManifest.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.INTERNET" /><application android:label="MyApp" android:theme="@android:style/Theme.Material.Light.NoActionBar"><activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter></activity></application></manifest>
+          cat > app/src/main/AndroidManifest.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <application android:label="${{ inputs.appName }}" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+              <activity android:name=".MainActivity" android:exported="true">
+                <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+              </activity>
+            </application>
+          </manifest>
           EOF
 
       - name: Build APK
@@ -76,9 +122,10 @@ jobs:
           curl -L -o gradle.zip https://services.gradle.org/distributions/gradle-8.2-bin.zip
           unzip -q gradle.zip
           ./gradle-8.2/bin/gradle assembleDebug --stacktrace
+          ls -lh app/build/outputs/apk/debug/
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyApp-apk
+          name: ${{ inputs.appName }}-apk
           path: app/build/outputs/apk/debug/app-debug.apk
