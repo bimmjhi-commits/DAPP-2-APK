@@ -10,6 +10,7 @@
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
 
 
@@ -73,7 +74,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 (function() {
   // Ganti URL ini satu kali setelah Cloudflare Worker backend selesai di-deploy.
-  var DAPP_BUILD_API = "https://dapp-builder-api.bimmjhi.workers.dev";
+  var DAPP_BUILD_API = "https://dapp-builder-api-v2.bimmjhi.workers.dev";
 
   var state = {
     appName: "",
