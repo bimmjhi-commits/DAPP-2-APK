@@ -1,93 +1,70 @@
-name: Build APK
+
+name: DAPP BUILDER - Build APK
+
 on:
   workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Build Request ID"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
-      - name: Buat Project Bersih
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ImageMagick
         run: |
-          rm -rf app
-          mkdir -p app/src/main/java/com/myapp/app
-          mkdir -p app/src/main/res/values
-          mkdir -p gradle/wrapper
-          cat > settings.gradle <<'EOF'
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
-          rootProject.name = 'MyApp'
-          include ':app'
-          EOF
-          cat > build.gradle <<'EOF'
-          plugins { id 'com.android.application' version '8.5.2' apply false }
-          EOF
-          cat > app/build.gradle <<'EOF'
-          plugins { id 'com.android.application' }
-          android {
-            namespace 'com.myapp.app'
-            compileSdk 35
-            defaultConfig {
-              applicationId 'com.myapp.app'
-              minSdk 24
-              targetSdk 35
-              versionCode 2
-              versionName '1.1'
-            }
-            buildTypes { release { minifyEnabled false } }
-            compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
-          }
-          EOF
-          cat > app/src/main/AndroidManifest.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.myapp.app">
-            <uses-permission android:name="android.permission.INTERNET" />
-            <application android:label="MyApp" android:theme="@style/Theme.MyApp" android:usesCleartextTraffic="true" android:hardwareAccelerated="true">
-              <activity android:name="com.myapp.app.MainActivity" android:exported="true">
-                <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
-              </activity>
-            </application>
-          </manifest>
-          EOF
-          cat > app/src/main/res/values/themes.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources><style name="Theme.MyApp" parent="@android:style/Theme.Material.Light.NoActionBar"><item name="android:windowBackground">@android:color/white</item></style></resources>
-          EOF
-          cat > app/src/main/res/values/strings.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources><string name="app_name">MyApp</string></resources>
-          EOF
-          cat > app/src/main/java/com/myapp/app/MainActivity.java <<'EOF'
-          package com.myapp.app;
-          import android.app.Activity;
-          import android.os.Bundle;
-          import android.widget.TextView;
-          public class MainActivity extends Activity {
-            @Override protected void onCreate(Bundle savedInstanceState) {
-              super.onCreate(savedInstanceState);
-              TextView tv = new TextView(this);
-              tv.setText("HALO POCO, APK NORMAL!");
-              tv.setTextSize(24);
-              setContentView(tv);
-            }
-          }
-          EOF
-          cat > gradle/wrapper/gradle-wrapper.properties <<'EOF'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          EOF
-          wget -q https://raw.githubusercontent.com/gradle/gradle/v8.7.0/gradle/wrapper/gradle-wrapper.jar -O gradle/wrapper/gradle-wrapper.jar
-          wget -q https://raw.githubusercontent.com/gradle/gradle/v8.7.0/gradlew -O gradlew
-          chmod +x gradlew
-      - name: Build APK
-        run: ./gradlew assembleDebug --stacktrace
-      - uses: actions/upload-artifact@v4
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Validate Build ID
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          if ! [[ "$BUILD_ID" =~ ^[0-9a-fA-F-]{20,40}$ ]]; then
+            echo "Invalid Build ID"
+            exit 1
+          fi
+
+      - name: Prepare Android Project
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          python scripts/prepare_build.py "$BUILD_ID"
+
+      - name: Setup Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
         with:
-          name: MyApp-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          gradle-version: "8.9"
+
+      - name: Build APK
+        working-directory: build-workspace
+        run: |
+          gradle assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DAPP-BUILDER-APK
+          path: build-workspace/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
