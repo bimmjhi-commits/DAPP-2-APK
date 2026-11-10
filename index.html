@@ -325,6 +325,11 @@ function renderTurnstile(root) {
     }
   });
 }
+
+  window.addEventListener("dapp-turnstile-loaded", function() {
+    var root = document.getElementById("root");
+    if (root) renderTurnstile(root);
+  });
   
   function render() {
     var root = document.getElementById("root");
