@@ -1,8 +1,9 @@
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://dapp-2-apk.vercel.app",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type"
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Vary": "Origin"
 };
 
 function json(data, status = 200) {
@@ -25,6 +26,30 @@ function decodeDataUrl(value) {
   if (!value || typeof value !== "string") return null;
   const match = value.match(/^data:image\/(?:png|jpeg|jpg);base64,([A-Za-z0-9+/=]+)$/);
   return match ? match[1] : null;
+}
+
+async function verifyTurnstile(token, request, env) {
+  if (!env.TURNSTILE_SECRET_KEY || !token) return false;
+
+  const formData = new FormData();
+  formData.append("secret", env.TURNSTILE_SECRET_KEY);
+  formData.append("response", token);
+
+  const ip = request.headers.get("CF-Connecting-IP");
+  if (ip) formData.append("remoteip", ip);
+
+  const res = await fetch(
+    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+    {
+      method: "POST",
+      body: formData
+    }
+  );
+
+  const data = await res.json();
+
+  return data.success === true &&
+    data.hostname === "dapp-2-apk.vercel.app";
 }
 
 async function github(env, path, options = {}) {
@@ -66,6 +91,23 @@ async function saveFile(env, path, content) {
 
 async function startBuild(request, env) {
   const body = await request.json();
+
+  if (!env.TURNSTILE_SECRET_KEY) {
+    return json({
+      ok: false,
+      error: "Konfigurasi Turnstile belum tersedia."
+    }, 500);
+  }
+
+  const token = body.turnstileToken;
+
+  if (!token || !(await verifyTurnstile(token, request, env))) {
+    return json({
+      ok: false,
+      error: "Verifikasi Cloudflare gagal. Silakan coba lagi."
+    }, 403);
+  }
+
   const config = body.config || body;
 
   const appName = String(config.appName || "").trim();
@@ -274,8 +316,17 @@ async function downloadApk(env, buildId) {
   });
 }
 
-export default {
+  export default {
   async fetch(request, env) {
+    const origin = request.headers.get("Origin");
+
+    if (origin && origin !== "https://dapp-2-apk.vercel.app") {
+      return json({
+        ok: false,
+        error: "Origin tidak diizinkan."
+      }, 403);
+    }
+
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
