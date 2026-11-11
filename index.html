@@ -1,4 +1,4 @@
-<!doctype html
+<!doctype html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
@@ -213,6 +213,12 @@ https://github.com/nodeca/pako/blob/main/LICENSE
     }
     if (!validateForm()) { render(); return; }
 
+    if (!state.turnstileToken) {
+      state.errorMsg = "Selesaikan verifikasi Cloudflare terlebih dahulu.";
+      render();
+      return;
+    }
+
     var finalConfig = {
       appName: state.appName.trim(),
       packageName: getPkg(),
@@ -238,15 +244,30 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-  config: finalConfig,
-  turnstileToken: state.turnstileToken || "",
-  html: state.sourceType === "html" ? state.html : "",
-  logoDataUrl: state.logoDataUrl || null,
-  turnstileToken: state.turnstileToken || ""
-})
+          config: finalConfig,
+          html: state.sourceType === "html" ? state.html : "",
+          logoDataUrl: state.logoDataUrl || null,
+          turnstileToken: state.turnstileToken
+        })
       });
       var data = await response.json().catch(function() { return {}; });
       if (!response.ok || !data.ok || !data.build_id) {
+        if (
+          response.status === 403 &&
+          /verifikasi|turnstile|captcha/i.test(data.error || "")
+        ) {
+          state.turnstileToken = "";
+          try {
+            var captchaContainer = document.getElementById("turnstile-container");
+            if (
+              window.turnstile &&
+              captchaContainer &&
+              captchaContainer.dataset.widgetId
+            ) {
+              window.turnstile.reset(captchaContainer.dataset.widgetId);
+            }
+          } catch (resetError) {}
+        }
         throw new Error(data.error || "Backend gagal menerima permintaan build.");
       }
       state.buildId = data.build_id;
@@ -339,6 +360,9 @@ function renderTurnstile(root) {
   function render() {
     var root = document.getElementById("root");
     if (!root) return;
+
+    // Keep the existing Turnstile widget alive when the UI is re-rendered.
+    var existingTurnstile = root.querySelector("#turnstile-container");
 
     var pkg = getPkg();
     var saved = state.savedHistory;
@@ -468,7 +492,16 @@ function renderTurnstile(root) {
     html += "</div>";
 
     root.innerHTML = html;
-attachEvents(root);
+
+    // Move the already-rendered CAPTCHA node into the new layout instead of
+    // destroying it. This prevents the widget from restarting on every render.
+    var newTurnstile = root.querySelector("#turnstile-container");
+    if (existingTurnstile && newTurnstile) {
+      newTurnstile.replaceWith(existingTurnstile);
+    }
+
+    attachEvents(root);
+    renderTurnstile(root);
   }
 
   function attachEvents(root) {
